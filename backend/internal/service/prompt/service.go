@@ -291,6 +291,13 @@ func (rnr *Service) runPromptAs(
 	emitTransient func(ChatEvent),
 ) error {
 	emit = withTurnID(ledgerRunID, emit)
+	emitUnattributed := emit
+	emit = func(event ChatEvent) {
+		// The actor comes from the authenticated transport or stored schedule
+		// owner, never from provider output or the client's prompt payload.
+		event.UserEmail = input.Actor.Email
+		emitUnattributed(event)
+	}
 	id := input.ChatID
 	prompt := input.Prompt
 	meta, err := rnr.store.Get(ctx, id)
