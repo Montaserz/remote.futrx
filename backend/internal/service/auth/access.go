@@ -6,6 +6,7 @@ import (
 
 	"github.com/futrx-com/remote.futrx.com/internal/rbac"
 	serviceproject "github.com/futrx-com/remote.futrx.com/internal/service/project"
+	"github.com/futrx-com/remote.futrx.com/internal/service/workspaceaccess"
 	"github.com/futrx-com/remote.futrx.com/internal/service/workspaceide"
 )
 
@@ -73,6 +74,14 @@ func (v *AccessVerifier) WithIDEAuthorizer(authorizer workspaceide.Authorizer) *
 // policy. Forward-auth bypasses API middleware, so it attaches only the actor
 // resolved from the validated session here, never a forwarded identity header.
 func (v *AccessVerifier) VerifyIDE(ctx context.Context, sessionCookie, projectSlug string) error {
+	return v.verifyWorkspace(ctx, sessionCookie, projectSlug, false)
+}
+
+func (v *AccessVerifier) VerifyBrowser(ctx context.Context, sessionCookie, projectSlug string) error {
+	return v.verifyWorkspace(ctx, sessionCookie, projectSlug, true)
+}
+
+func (v *AccessVerifier) verifyWorkspace(ctx context.Context, sessionCookie, projectSlug string, browser bool) error {
 	session, err := v.auth.CurrentSession(ctx, sessionCookie)
 	if err != nil || session == nil {
 		return ErrAuthenticationRequired
@@ -105,5 +114,8 @@ func (v *AccessVerifier) VerifyIDE(ctx context.Context, sessionCookie, projectSl
 		}
 	}
 	ctx = rbac.ContextWithActor(ctx, rbac.UserActor(session.Email))
+	if browser {
+		return workspaceaccess.Require(ctx, v.ideAuthorizer, "browser", string(project.ID))
+	}
 	return workspaceide.RequireAccess(ctx, v.ideAuthorizer, string(project.ID))
 }

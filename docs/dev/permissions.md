@@ -240,3 +240,30 @@ IDE WebSocket. This controls Remote's built-in IDE entry points, not arbitrary
 software installed by a user with authorized shell or agent execution. An IDE
 itself can expose terminal and filesystem access; these are not independent
 sandbox boundaries.
+
+## Workspace capabilities
+
+The existing policy UI also exposes `workspace.terminal.use`,
+`workspace.files.use`, `workspace.git.use`, and `workspace.browser.use` at
+project scope. Their baseline is project membership. The corresponding
+`workspace.hostterminal.use`, `workspace.hostfiles.use`, `workspace.hostgit.use`
+and `workspace.hostbrowser.use` platform permissions default to administrators;
+operators can grant them explicitly. Host tmux HTTP actions and WebSocket
+attachment require the host terminal permission.
+
+File listing, searching, media opening and downloads, Git history/checkout and
+terminal upgrades are authorized before the transport performs filesystem or
+process operations. Project services enforce `projects.secrets.manage` for
+reading/changing secrets and `projects.controls.manage` for renaming, reordering,
+deleting, upgrading and setting resource overrides. These default to project
+members, as does the separate existing lifecycle permission. Browser start,
+status, stop, listener discovery and authenticated preview forward-auth use the
+browser permission. Public preview shares remain explicit grants to their
+published application; they cannot authorize the built-in noVNC browser or IDE.
+
+Revocation blocks new HTTP requests and WebSocket handshakes. Existing terminal
+or browser sessions are not forcibly disconnected. These are Remote feature
+permissions, not isolation between mutually untrusted users sharing a container:
+an allowed agent, IDE or terminal can still access that container's files and
+injected secrets. The trusted agent execution adapter continues injecting
+project secrets even when a user cannot inspect them through Settings.

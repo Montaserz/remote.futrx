@@ -270,8 +270,8 @@ func TestAgentBrowserStartIsNotGatedByTheLifecyclePermission(t *testing.T) {
 
 	_, _ = service.StartAgentBrowser(context.Background(), "abcd")
 
-	if checks := authorizer.recorded(); len(checks) != 0 {
-		t.Fatalf("StartAgentBrowser consulted the authorizer: %#v", checks)
+	if checks := authorizer.recorded(); len(checks) != 1 || checks[0].Permission != "workspace.browser.use" {
+		t.Fatalf("StartAgentBrowser did not consult only its browser capability: %#v", checks)
 	}
 }
 

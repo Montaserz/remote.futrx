@@ -145,6 +145,7 @@ func NewHTTPHandler(deps Dependencies) (http.Handler, error) {
 		WorkspaceWS:      workspaceSocket,
 		AgentAuthWS:      wstransport.NewAgentAuthSocket(agentAuthBindings),
 		Auth:             auth,
+		Workspace:        httpmiddleware.Workspace{Authorizer: deps.Services.Permissions, Chats: deps.Services.Chats},
 		Middleware:       middleware,
 		Static:           httptransport.NewStaticHandler(deps.Static),
 	}), nil

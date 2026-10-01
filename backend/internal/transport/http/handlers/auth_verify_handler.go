@@ -44,13 +44,15 @@ func (h *authVerifyHandler) verify(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid IDE target", http.StatusBadRequest)
 		return
 	}
-	if !ideRequest && matchedSlug != "" && h.authorizeShare(w, r, matchedSlug, matchedPort) {
+	if !ideRequest && matchedPort != configconstants.ProjectPreviewAgentBrowserPort && matchedSlug != "" && h.authorizeShare(w, r, matchedSlug, matchedPort) {
 		return
 	}
 
 	var err error
 	if ideRequest {
 		err = h.access.VerifyIDE(r.Context(), httptransport.SessionCookieValue(r), ideSlug)
+	} else if matchedSlug != "" {
+		err = h.access.VerifyBrowser(r.Context(), httptransport.SessionCookieValue(r), matchedSlug)
 	} else {
 		err = h.access.Verify(r.Context(), httptransport.SessionCookieValue(r), matchedSlug)
 	}

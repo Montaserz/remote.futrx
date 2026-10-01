@@ -28,7 +28,9 @@ func (r agentProjectResolver) Start(ctx context.Context, id agent.ProjectID) (ag
 }
 
 func (r agentProjectResolver) ListSecrets(ctx context.Context, id agent.ProjectID) ([]agent.ProjectSecret, error) {
-	secrets, err := r.projects.ListSecrets(ctx, serviceproject.ID(id))
+	// Execution already has access to the injected container environment. The
+	// UI secrets capability controls inspection/editing, not runtime injection.
+	secrets, err := r.projects.ListSecrets(servicepermission.ContextWithSystemActor(ctx), serviceproject.ID(id))
 	if err != nil {
 		return nil, err
 	}

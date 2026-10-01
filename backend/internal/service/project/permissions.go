@@ -9,7 +9,9 @@ import (
 // Permissions owned by the project service. Keys are stable persisted
 // identifiers; renaming one needs a store migration or a declared alias.
 const (
-	PermissionCreate permission.Key = "projects.project.create"
+	PermissionControlsManage permission.Key = "projects.controls.manage"
+	PermissionSecretsManage  permission.Key = "projects.secrets.manage"
+	PermissionCreate         permission.Key = "projects.project.create"
 	// PermissionLifecycleManage gates starting, stopping, restarting, and
 	// repairing the network of a project's container.
 	PermissionLifecycleManage permission.Key = "projects.lifecycle.manage"
@@ -22,6 +24,8 @@ const (
 // registered-user creation and project-member lifecycle/access behavior.
 func PermissionDefinitions() []permission.Definition {
 	return []permission.Definition{
+		{Key: PermissionControlsManage, Description: "Rename, delete, upgrade and change project resource limits.", Scopes: []permission.ScopeKind{permission.ScopeProject}, Baseline: permission.BaselineProjectMember, Delegable: true},
+		{Key: PermissionSecretsManage, Description: "Read and change project secrets.", Scopes: []permission.ScopeKind{permission.ScopeProject}, Baseline: permission.BaselineProjectMember, Delegable: true},
 		{Key: PermissionCreate, Description: "Create a project.", Scopes: []permission.ScopeKind{permission.ScopePlatform}, Baseline: permission.BaselineAuthenticated, Delegable: true},
 		{
 			Key:         PermissionLifecycleManage,

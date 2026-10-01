@@ -71,7 +71,7 @@ export function WorkspaceActions({
         tooltip="Open workspace in IDE"
         tooltipPlacement={tooltipPlacement}
       />}
-      <WorkspaceAction
+      {permissions[projectId ? "workspace.terminal.use" : "workspace.hostterminal.use"] === true && <WorkspaceAction
         Icon={Terminal}
         onClick={onToggleTerminal}
         label={terminalOpen ? "Close container terminal" : "Container terminal"}
@@ -80,8 +80,8 @@ export function WorkspaceActions({
         controls="workspace-terminal-pane"
         action="terminal"
         tooltipPlacement={tooltipPlacement}
-      />
-      {showHistory && (
+      />}
+      {showHistory && permissions[projectId ? "workspace.git.use" : "workspace.hostgit.use"] === true && (
         <WorkspaceAction
           Icon={Clock}
           onClick={onToggleHistory}
@@ -93,7 +93,7 @@ export function WorkspaceActions({
           tooltipPlacement={tooltipPlacement}
         />
       )}
-      <WorkspaceAction
+      {permissions[projectId ? "workspace.files.use" : "workspace.hostfiles.use"] === true && <WorkspaceAction
         Icon={Folder}
         onClick={onToggleFiles}
         label={filesOpen ? "Close workspace files" : "Workspace files"}
@@ -102,7 +102,7 @@ export function WorkspaceActions({
         controls="workspace-files-pane"
         action="files"
         tooltipPlacement={tooltipPlacement}
-      />
+      />}
       {showSchedules && (
         <WorkspaceAction
           Icon={CalendarClock}
@@ -115,7 +115,7 @@ export function WorkspaceActions({
           tooltipPlacement={tooltipPlacement}
         />
       )}
-      <WorkspaceAction
+      {permissions[projectId ? "workspace.browser.use" : "workspace.hostbrowser.use"] === true && <WorkspaceAction
         Icon={Monitor}
         onClick={onToggleBrowser}
         label={browserOpen ? "Close browser preview" : "Browser preview"}
@@ -124,7 +124,7 @@ export function WorkspaceActions({
         controls="workspace-browser-pane"
         action="browser"
         tooltipPlacement={tooltipPlacement}
-      />
+      />}
     </div>
   );
 }

@@ -130,3 +130,34 @@ func TestIDEOpenRouteUsesSamePermissionAsDirectNavigation(t *testing.T) {
 		t.Fatalf("admin: %d %s", r.Code, r.Body)
 	}
 }
+
+func TestBrowserForwardAuthUsesCurrentPolicyAndRejectsSharedNoVNC(t *testing.T) {
+	f := newMembershipRoutesFixture(t)
+	project, err := f.projects.Get(context.Background(), serviceproject.ID(f.projectID))
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := &authVerifyHandler{auth: f.auth, access: serviceauth.NewAccessVerifier(f.auth, f.projects).WithIDEAuthorizer(f.permissions), shares: &shareAuthorizerStub{validToken: "shared", allows: true}}
+	value, err := f.auth.IssueSession(context.Background(), serviceauth.User{Email: "member@example.com"}, serviceauth.SignInMethodPassword, "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cookie := &http.Cookie{Name: serviceauth.SessionCookieName, Value: value}
+	host := project.Slug + "--6080.dev." + verifyBaseHost
+	if r := verifyRequest(t, h, host, "/?share=shared", nil); r.Code != 302 {
+		t.Fatalf("unauthenticated noVNC %d", r.Code)
+	}
+	if r := verifyRequest(t, h, host, "/", cookie); r.Code != 200 {
+		t.Fatalf("member %d %s", r.Code, r.Body)
+	}
+	_, err = f.permissions.SetAssignment(adminContext(), rbac.AssignmentInput{UserEmail: "member@example.com", Permission: "workspace.browser.use", Effect: rbac.Deny, Scope: rbac.ProjectScope(f.projectID)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r := verifyRequest(t, h, host, "/?share=shared", cookie); r.Code != 403 {
+		t.Fatalf("revoked noVNC %d", r.Code)
+	}
+	if r := verifyRequest(t, h, project.Slug+"--3000.dev."+verifyBaseHost, "/", cookie); r.Code != 403 {
+		t.Fatalf("revoked preview %d", r.Code)
+	}
+}
