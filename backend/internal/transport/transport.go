@@ -102,9 +102,9 @@ func NewHTTPHandler(deps Dependencies) (http.Handler, error) {
 		deps.Services.Applications,
 		deps.Services.Auth,
 		deps.Services.Projects,
-	)
+	).WithWebHost(deps.PublicHostname)
 
-	return httptransport.NewHandler(httptransport.Handlers{
+	handler := httptransport.NewHandler(httptransport.Handlers{
 		Audit:    httphandlers.NewAuditHandler(deps.Services.Audit, deps.Services.Auth),
 		Sessions: httphandlers.NewTmuxHandler(deps.Services.Tmux).WithAudit(deps.Services.Audit),
 		Chats:    chatHandler,
@@ -152,7 +152,12 @@ func NewHTTPHandler(deps Dependencies) (http.Handler, error) {
 		Workspace:        httpmiddleware.Workspace{Authorizer: deps.Services.Permissions, Chats: deps.Services.Chats},
 		Middleware:       middleware,
 		Static:           httptransport.NewStaticHandler(deps.Static),
-	}), nil
+	})
+	baseURL := "https://" + deps.PublicHostname
+	if deps.Services.Auth != nil {
+		baseURL = deps.Services.Auth.BaseURL()
+	}
+	return httpmiddleware.NewBrowserProtection(baseURL).Wrap(applicationsHandler.WebHandler(handler)), nil
 }
 
 func NewHTTPServer(addr string, handler http.Handler) *http.Server {

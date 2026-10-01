@@ -294,6 +294,7 @@ Every project gets its own HTTPS address, so Remote needs a hostname with wildca
 | `code.remote.example.com` | Browser IDE |
 | `*.code.remote.example.com` | Per-project browser IDEs |
 | `*.dev.remote.example.com` | Per-project application previews |
+| `*.apps.remote.example.com` | Installed project applications, one origin per installation |
 
 **If you want a free hostname,** [DuckDNS](https://www.duckdns.org) is the quickest, because it resolves every subdomain automatically and there are no DNS records to create:
 
@@ -303,7 +304,7 @@ Every project gets its own HTTPS address, so Remote needs a hostname with wildca
 
 Then install using `yourname.duckdns.org` as the hostname.
 
-[deSEC](https://desec.io) is a good alternative, run by a non-profit and less likely to be filtered on corporate networks. It is a full DNS host rather than a wildcard service, so create the four records from the table above under your `yourname.dedyn.io` name.
+[deSEC](https://desec.io) is a good alternative, run by a non-profit and less likely to be filtered on corporate networks. It is a full DNS host rather than a wildcard service, so create the records from the table above under your `yourname.dedyn.io` name.
 
 > [!NOTE]
 > Free dynamic-DNS providers are community-run with no uptime guarantee, and some corporate networks block all of `*.duckdns.org` because of unrelated abuse elsewhere on it. If a preview link refuses to open at the office, that is usually why, and a domain you own avoids it.
