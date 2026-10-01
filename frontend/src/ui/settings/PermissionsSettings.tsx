@@ -1,13 +1,15 @@
 import { useEffect, useState } from "preact/hooks";
-import { permissionsApi, type PermissionPolicy, type PermissionRule, type PermissionScope } from "../../api/permissionsApi";
+import { permissionsApi, type PermissionPolicy, type PermissionRule, type PermissionScope, type AccountPermissionTarget } from "../../api/permissionsApi";
 import { projectApi } from "../../api/projectApi";
 import type { ProjectMeta } from "../../models/project";
 
 const field = "rounded-control border border-line bg-surface px-2 py-1.5 text-sm";
-const scopeLabel = (scope: PermissionScope) => scope.kind === "platform" ? "Server" : `Project ${scope.id}`;
+const scopeLabel = (scope: PermissionScope) => scope.kind === "platform" ? "Server" : scope.kind === "project" ? `Project ${scope.id}` : `Account ${scope.id}`;
 
 export function PermissionsSettings() {
   const [policy, setPolicy] = useState<PermissionPolicy | null>(null);
+  const [accounts, setAccounts] = useState<AccountPermissionTarget[]>([]);
+  const [accountScope, setAccountScope] = useState("");
   const [projects, setProjects] = useState<ProjectMeta[]>([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -20,10 +22,10 @@ export function PermissionsSettings() {
   const [roleName, setRoleName] = useState("");
   const [roleDescription, setRoleDescription] = useState("");
   const [rules, setRules] = useState<PermissionRule[]>([]);
-  const scope: PermissionScope = projectId ? { kind: "project", id: projectId } : { kind: "platform" };
+  const scope: PermissionScope = accountScope ? { kind: "provider-account", id: accountScope } : projectId ? { kind: "project", id: projectId } : { kind: "platform" };
   const refresh = async () => {
-    const [next, visible] = await Promise.all([permissionsApi.policy(), projectApi.list()]);
-    setPolicy(next); setProjects(visible);
+    const [next, visible, targets] = await Promise.all([permissionsApi.policy(), projectApi.list(), permissionsApi.accounts()]);
+    setPolicy(next); setProjects(visible); setAccounts(targets);
   };
   useEffect(() => { void refresh().catch(e => setError(String(e.message || e))); }, []);
   const mutate = async (operation: () => Promise<unknown>) => {
@@ -37,13 +39,14 @@ export function PermissionsSettings() {
   const eligible = policy?.definitions.filter(d => d.Scopes.includes(scope.kind)) || [];
   return <section class="rounded-card border border-line bg-surface p-4 space-y-4">
     <h2 class="font-semibold text-ink-50">Permissions</h2>
-    <p class="text-sm text-ink-300">Deny overrides allow. Server rules apply only to server actions; project rules apply only to the selected project. Administrators always retain access.</p>
+    <p class="text-sm text-ink-300">Deny overrides allow. Server rules apply only to server actions; project and account rules apply only to the selected resource. Administrators always retain access.</p>
     {error && <p role="alert" class="text-accent-red">{error}</p>}
     {!policy ? <p class="text-sm text-ink-300">{error ? "Permission management is unavailable for this account." : "Loading permissions…"}</p> : <fieldset disabled={busy} class="space-y-5 disabled:opacity-60">
       <div class="flex flex-wrap gap-3">
         <label class="text-sm">User email<input type="email" class={`${field} block`} value={email} onInput={e => setEmail(e.currentTarget.value)} /></label>
-        <label class="text-sm">Scope<select class={`${field} block`} value={projectId} onChange={e => { setProjectId(e.currentTarget.value); setPermission(""); setRoleId(""); }}>
+        <label class="text-sm">Scope<select class={`${field} block`} value={accountScope ? `account:${accountScope}` : projectId} onChange={e => { const value = e.currentTarget.value; setAccountScope(value.startsWith("account:") ? value.slice(8) : ""); setProjectId(value.startsWith("account:") ? "" : value); setPermission(""); setRoleId(""); }}>
           <option value="">Server</option>{projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+          {accounts.map(a => <option key={a.scope.id} value={`account:${a.scope.id}`}>{a.provider}: {a.label}</option>)}
         </select></label>
       </div>
       <form class="flex flex-wrap gap-2 items-end" onSubmit={e => { e.preventDefault(); void mutate(() => permissionsApi.assign({ UserEmail: email, Permission: permission, Effect: effect, Scope: scope })); }}>

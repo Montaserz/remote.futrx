@@ -8,16 +8,25 @@ import (
 	"strings"
 
 	"github.com/futrx-com/remote.futrx.com/internal/rbac"
+	agentaccountaccess "github.com/futrx-com/remote.futrx.com/internal/service/agent/accountaccess"
 	httptransport "github.com/futrx-com/remote.futrx.com/internal/transport/http"
 )
 
 // PermissionsHandler only decodes transport data. Every query and mutation is
 // authorized by the existing RBAC service, including delegated management.
-type PermissionsHandler struct{ service *rbac.Service }
+type PermissionsHandler struct {
+	service  *rbac.Service
+	accounts *agentaccountaccess.Service
+}
 
 func NewPermissionsHandler(service *rbac.Service) *PermissionsHandler {
 	return &PermissionsHandler{service: service}
 }
+func (h *PermissionsHandler) WithAccounts(accounts *agentaccountaccess.Service) *PermissionsHandler {
+	h.accounts = accounts
+	return h
+}
+
 func (h *PermissionsHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/permissions", h.handle)
 	mux.HandleFunc("/api/permissions/", h.handle)
@@ -47,6 +56,19 @@ func (h *PermissionsHandler) handle(w http.ResponseWriter, r *http.Request) {
 	state, definitions, err := h.service.Policy(r.Context())
 	if err != nil {
 		sendPermissionError(w, err)
+		return
+	}
+	if path == "/accounts" && r.Method == http.MethodGet {
+		if h.accounts == nil {
+			httptransport.SendJSON(w, 200, []agentaccountaccess.Target{})
+			return
+		}
+		targets, err := h.accounts.Targets(r.Context())
+		if err != nil {
+			sendPermissionError(w, err)
+			return
+		}
+		httptransport.SendJSON(w, 200, targets)
 		return
 	}
 	if path == "" && r.Method == http.MethodGet {

@@ -19,11 +19,16 @@ const (
 type ScopeKind = models.ScopeKind
 
 const (
-	ScopePlatform = models.ScopePlatform
-	ScopeProject  = models.ScopeProject
+	ScopePlatform        = models.ScopePlatform
+	ScopeProject         = models.ScopeProject
+	ScopeProviderAccount = models.ScopeProviderAccount
 )
 
 type Scope = models.Scope
+
+func ProviderAccountScope(provider, accountID string) Scope {
+	return models.ProviderAccountScope(provider, accountID)
+}
 
 func PlatformScope() Scope         { return models.PlatformScope() }
 func ProjectScope(id string) Scope { return models.ProjectScope(id) }

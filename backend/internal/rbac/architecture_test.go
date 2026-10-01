@@ -181,16 +181,19 @@ func TestEnforcingServicesDoNotDependOnAuthTransportOrStores(t *testing.T) {
 func TestActorConstructorsAreCalledOnlyFromReviewedEntryPoints(t *testing.T) {
 	allowed := map[string][]string{
 		"ContextWithSystemActor": {
-			"internal/service/agent_project_resolver.go",     // agent runs start containers from background contexts
-			"internal/service/chat_notification_audience.go", // notification fan-out reads members
-			"internal/service/services.go",                   // application container readiness
-			"internal/service/user_removal_cleanup.go",       // removing a user revokes their access
-			"internal/rbac/assignments.go",                   // RemoveUserPolicy cleanup
+			"internal/service/agent_project_resolver.go",       // agent runs start containers from background contexts
+			"internal/service/chat_notification_audience.go",   // notification fan-out reads members
+			"internal/service/services.go",                     // application container readiness
+			"internal/service/user_removal_cleanup.go",         // removing a user revokes their access
+			"internal/integration/agents/claude/plan_usage.go", // internal quota sampling; outward readings are filtered
+			"internal/integration/agents/codex/plan_usage.go",  // internal quota sampling; outward readings are filtered
+			"internal/rbac/assignments.go",                     // RemoveUserPolicy cleanup
 		},
 		"SystemActor": {
 			"internal/rbac/actor.go",
 		},
 		"ContextWithActor": {
+			"internal/service/prompt/account_access.go",  // authenticated request actor or persisted schedule owner
 			"internal/transport/http/middleware/auth.go", // attaches the authenticated session's actor
 			"internal/rbac/actor.go",
 		},

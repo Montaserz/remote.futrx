@@ -10,7 +10,7 @@ are allowed everything, and no stored record can remove that.
 | Term | Meaning |
 | --- | --- |
 | **Actor** | Who is acting: a human identified by normalized email, or the trusted system. Carried in `context.Context`; a missing actor is never the system. |
-| **Resource / scope** | What the action applies to: `platform` or `project:<id>`. Matching is exact, so a platform record never applies to a project, and project A never applies to project B. |
+| **Resource / scope** | What the action applies to: `platform`, `project:<id>`, or `provider-account:<provider>:<account-id>`. Matching is exact, so a platform record never applies to a project, and project A never applies to project B. |
 | **Definition** | A permission declared in code: key `<context>.<resource>.<action>`, supported scope kinds, a baseline, and whether it is delegable. There is no runtime way to create one. |
 | **Role** | A persisted bundle of `(permission, effect)` rules. Independent of `user.User.Role`. |
 | **Assignment** | A direct `allow` or `deny` of one permission to one user at one scope. |
@@ -213,3 +213,57 @@ comes from authenticated middleware. Unknown fields, extra JSON values and
 oversized bodies are rejected. Mutation audit and persistence are unchanged.
 Creation controls refresh on focus, local policy changes and periodically;
 server authorization runs on every operation regardless of UI freshness.
+
+
+## Claude and Codex account allocation
+
+Provider accounts use the same role, assignment, binding and policy store as
+project permissions. `agents.account.use` supports the `provider-account` scope
+and has no member baseline. `agents.accounts.manage` is an administrator-only,
+non-delegable platform permission for importing, logging in, changing the host
+default, deleting accounts, and viewing raw login status. Existing handler-level
+administrator checks remain in place.
+
+**Upgrade behavior:** registered members need explicit account grants before
+creating or running Claude/Codex chats, including existing chats and scheduled
+runs. Administrators retain recovery access. Before enabling member workloads,
+open Settings → Users → Permissions, select the account, and allow `agents.account.use` for the registered user. Alternatively create a role containing
+`agents.account.use` and bind that role to users at each intended account scope.
+A direct deny overrides role grants. Claude and Codex accounts are separate
+scopes even when their account IDs match.
+
+An account scope is represented as
+`{"kind":"provider-account","id":"codex:<saved-account-id>"}`. The management
+endpoint `GET /api/permissions/accounts` lists the available targets; it requires
+policy-management permission. `claude:default` and `codex:default` represent the
+host login when there is no saved active account. An empty selection resolves to
+the actual saved active account when one exists and requires permission for that
+account, not permission for the host-login target. Prefer explicitly selected
+saved accounts when assignments must remain stable across host-default changes.
+
+Account catalogues, status streams, and quota responses omit unauthorized
+accounts. Members do not receive raw login-flow details. Open normalized status
+streams re-evaluate policy at least every 15 seconds, even without a provider
+status event. The composer cannot silently replace a revoked explicit account
+with another account. Server checks remain authoritative regardless of UI state.
+
+The owning services check account selection during chat creation, forks,
+provider/account changes, prompt admission, and each provider invocation. The
+credential owner resolves the active default and re-checks permission under its
+account lock before copying credentials or granting a legacy host-login lease.
+Scheduled runs use their stored owner's identity, without administrator or
+system elevation. Revocation denies subsequent requests; it does not terminate
+an already running provider process.
+
+The existing per-chat account homes and concurrent saved-account execution are
+preserved. This policy controls Remote's credential selection and metadata APIs;
+it does not isolate secrets from arbitrary code or shell access in a shared
+project container. Treat users who can execute code in that container as sharing
+its filesystem trust boundary.
+
+The policy file remains version 1 with an additional typed scope. Back it up
+before upgrading. Older binaries reject the new scope and permission keys on
+startup: before rollback, export the policy and remove account assignments,
+account role bindings, and account permission rules using the newer version, or
+restore a compatible pre-upgrade policy backup. Do not silently discard these
+records during downgrade.
