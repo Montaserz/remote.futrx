@@ -368,3 +368,8 @@ sudo bash /opt/remote.futrx/infra/upgrade-workspaces.sh --dry-run
 - Systemd template: [`infra/templates/remote.futrx.service.tmpl`](../../infra/templates/remote.futrx.service.tmpl)
 - Base-image builder: [`backend/internal/service/container/image/builder.go`](../../backend/internal/service/container/image/builder.go)
 - Audit store: [`backend/internal/stores/fileaudit/store.go`](../../backend/internal/stores/fileaudit/store.go)
+
+## Workspace storage
+
+See [storage selection and migration](11-storage.md) for fresh-install ZFS/Btrfs
+configuration, preservation of existing pools and a staged migration checklist.

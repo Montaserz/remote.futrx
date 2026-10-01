@@ -24,7 +24,13 @@ func (f *fakeRunner) Available() bool { return true }
 func (f *fakeRunner) Run(_ context.Context, args ...string) (string, error) {
 	key := strings.Join(args, " ")
 	f.calls = append(f.calls, key)
-	r := f.responses[key]
+	r, exists := f.responses[key]
+	if !exists && strings.HasPrefix(key, "query /1.0/instances/") {
+		return `{ "expanded_devices":{"root":{"pool":"default","size":"20GiB"}}}`, nil
+	}
+	if !exists && key == "storage show default" {
+		return "driver: zfs", nil
+	}
 	return r.out, r.err
 }
 
@@ -116,6 +122,7 @@ func TestSetLimitsAppliesContainerOverrides(t *testing.T) {
 	want := []string{
 		"config set c1 limits.cpu 4",
 		"config set c1 limits.memory 8GiB",
+		"query /1.0/instances/c1", "storage show default",
 		"config device override c1 root size=40GiB",
 	}
 	if !slices.Equal(runner.calls, want) {
@@ -133,7 +140,8 @@ func TestSetLimitsClearsContainerOverrides(t *testing.T) {
 	want := []string{
 		"config unset c1 limits.cpu",
 		"config unset c1 limits.memory",
-		"config device unset c1 root size",
+		"query /1.0/instances/c1", "storage show default",
+		"config device override c1 root size=20GiB",
 	}
 	if !slices.Equal(runner.calls, want) {
 		t.Fatalf("calls:\n got: %q\nwant: %q", runner.calls, want)

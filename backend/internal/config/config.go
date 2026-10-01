@@ -11,6 +11,8 @@ import (
 
 type Config struct {
 	AuditRetentionMonths int
+	DiskWarningPercent   int
+	DefaultRootDiskQuota string
 	Host                 string
 	Port                 string
 	DataDir              string
@@ -87,6 +89,8 @@ type ScheduleLimits struct {
 func Load() Config {
 	return Config{
 		AuditRetentionMonths: envInt("AUDIT_RETENTION_MONTHS", 12),
+		DiskWarningPercent:   envInt("DISK_WARNING_PERCENT", 80),
+		DefaultRootDiskQuota: envDefault("PROJECT_ROOT_DISK_QUOTA", "20GiB"),
 		Host:                 envDefault("HOST", "127.0.0.1"),
 		Port:                 envDefault("PORT", "7682"),
 		DataDir:              envDefault("DATA_DIR", "/opt/remote.futrx/data"),
