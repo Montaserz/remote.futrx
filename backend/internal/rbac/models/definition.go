@@ -28,8 +28,9 @@ func (e Effect) Valid() bool { return e == Allow || e == Deny }
 type ScopeKind string
 
 const (
-	ScopePlatform ScopeKind = "platform"
-	ScopeProject  ScopeKind = "project"
+	ScopePlatform        ScopeKind = "platform"
+	ScopeProject         ScopeKind = "project"
+	ScopeProviderAccount ScopeKind = "provider-account"
 )
 
 // Scope is the resource a permission applies to. Matching is exact: platform
@@ -45,6 +46,13 @@ func PlatformScope() Scope { return Scope{Kind: ScopePlatform} }
 // ProjectScope is the scope of actions on one project.
 func ProjectScope(id string) Scope { return Scope{Kind: ScopeProject, ID: id} }
 
+func ProviderAccountScope(provider, accountID string) Scope {
+	if accountID == "" {
+		accountID = "default"
+	}
+	return Scope{Kind: ScopeProviderAccount, ID: provider + ":" + accountID}
+}
+
 var scopeIDPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,63}$`)
 
 // Validate rejects unknown kinds and IDs that do not fit their kind.
@@ -53,6 +61,11 @@ func (s Scope) Validate() error {
 	case ScopePlatform:
 		if s.ID != "" {
 			return fmt.Errorf("%w: platform scope takes no id", ErrInvalidScope)
+		}
+	case ScopeProviderAccount:
+		parts := strings.Split(s.ID, ":")
+		if len(parts) != 2 || !scopeIDPattern.MatchString(parts[0]) || !scopeIDPattern.MatchString(parts[1]) {
+			return fmt.Errorf("%w: malformed provider-account id", ErrInvalidScope)
 		}
 	case ScopeProject:
 		if !scopeIDPattern.MatchString(s.ID) {
@@ -171,6 +184,9 @@ func (d Definition) Validate() error {
 // probeID returns an ID that is valid for kind, so a kind can be checked
 // without a concrete resource.
 func probeID(kind ScopeKind) string {
+	if kind == ScopeProviderAccount {
+		return "claude:probe"
+	}
 	if kind == ScopePlatform {
 		return ""
 	}
