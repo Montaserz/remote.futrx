@@ -104,4 +104,4 @@ assert_json '.storage_pools[0].driver == "dir"'
     [ "$FUTRX_STORAGE_DRIVER" = btrfs ] && [ "$FUTRX_STORAGE_POOL" = workspaces ] &&
         [ "$FUTRX_STORAGE_SIZE" = 100GiB ] || fail 'storage flags not parsed'
 )
-echo 'LXD storage selection tests passed' 
+echo 'LXD storage selection tests passed'
