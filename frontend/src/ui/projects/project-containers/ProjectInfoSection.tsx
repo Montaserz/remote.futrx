@@ -75,6 +75,8 @@ export function ProjectInfoSection({
       {info.persistentStorage && <Panel title="Persistent project storage"><>
         {info.persistentStorage.warning && <p role="alert" class="text-accent-red">The filesystem holding this project's data is approaching capacity.</p>}
         <Grid>
+          <Field label="Persistent data quota" value={info.persistentStorage.quota?.enforced && info.persistentStorage.quota.limitBytes !== undefined ? formatBytes(info.persistentStorage.quota.limitBytes) : "Not enforced"} />
+          <Field label="Quota status" value={info.persistentStorage.quota?.detail || (info.persistentStorage.quota?.enforced ? "Enforced by ZFS for workspace, provider homes and caches" : "Unavailable")} />
           <Field label="Workspace and provider homes" value={info.persistentStorage.bytes === undefined ? "Unknown" : formatBytes(info.persistentStorage.bytes)} />
           <Field label="Sample" value={info.persistentStorage.pending ? "Sampling; refresh shortly" : (info.persistentStorage.sampledAt ? new Date(info.persistentStorage.sampledAt * 1000).toLocaleString() : "Not sampled")} />
           <Field label="Filesystem available" value={info.persistentStorage.availableBytes === undefined ? "Unknown" : formatBytes(info.persistentStorage.availableBytes)} />

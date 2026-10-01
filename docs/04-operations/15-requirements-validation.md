@@ -57,7 +57,7 @@ covered by service/transport tests; these do not replace live provider testing.
 - Existing pools are never silently converted. Migration is explicit and offline.
   See [storage setup](11-storage.md) and [disk safety](14-storage-safety.md).
 - Root quotas do not cover host bind-mounted workspace/provider-home data. That
-  filesystem needs its own capacity and dataset/filesystem quota policy.
+  filesystem needs its own capacity policy. The [persistent quota backend](16-persistent-project-quotas.md) now provides ZFS dataset enforcement for workspace/provider-home data; legacy directory storage explicitly reports no enforcement.
 - Application permissions are not isolation from a project root shell or an
   agent already authorized to execute arbitrary commands in that same project.
 

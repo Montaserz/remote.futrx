@@ -30,10 +30,9 @@ when the next sample falls below the threshold; they are status indicators, not
 repeated push notifications. Unavailable inode metrics remain absent.
 
 **A root quota does not constrain bind-mounted project data.** npm/Go caches in
-`/workspace` also consume that host filesystem. Use a separately capacity-managed
-filesystem/dataset for `/var/lib/remote/projects`, and apply per-project dataset
-or filesystem quotas there if workloads must be unable to fill persistent
-storage. Do not claim the root quota alone protects the entire host. Backups,
+`/workspace` also consume that host filesystem. Use the [persistent project quota backend](16-persistent-project-quotas.md)
+for ZFS workspace/provider-home quotas, or an independently managed filesystem
+quota policy. Do not claim the root quota alone protects the entire host. Backups,
 images and shared pool metadata require capacity planning too.
 
 ## Moving existing containers

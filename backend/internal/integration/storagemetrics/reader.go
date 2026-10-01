@@ -14,7 +14,14 @@ import (
 	"time"
 )
 
+type QuotaReader interface {
+	Inspect(context.Context, string) project.PersistentQuota
+}
+
+func (r *Reader) WithQuotaReader(q QuotaReader) *Reader { r.quotas = q; return r }
+
 type Reader struct {
+	quotas    QuotaReader
 	root      string
 	threshold float64
 	mu        sync.Mutex
@@ -28,7 +35,13 @@ func New(root string, threshold float64) *Reader {
 	}
 	return &Reader{root: filepath.Clean(root), threshold: threshold, entries: map[string]project.PersistentStorage{}, worker: make(chan struct{}, 1)}
 }
-func (r *Reader) Read(_ context.Context, cwd string) project.PersistentStorage {
+func (r *Reader) Read(ctx context.Context, cwd string) (result project.PersistentStorage) {
+	defer func() {
+		if r.quotas != nil {
+			q := r.quotas.Inspect(ctx, cwd)
+			result.Quota = &q
+		}
+	}()
 	parent := filepath.Dir(filepath.Clean(cwd))
 	relative, err := filepath.Rel(r.root, parent)
 	if err != nil || relative == "." || strings.HasPrefix(relative, "..") || filepath.Dir(relative) != "." || filepath.Base(cwd) != "workspace" {

@@ -137,11 +137,14 @@ func main() {
 		lxc.New(),
 		instructionProfiles,
 		config.ContainerStackOptions{
-			DiskWarningPercent:   float64(cfg.DiskWarningPercent),
-			DefaultRootDiskQuota: cfg.DefaultRootDiskQuota,
-			AgentInstructions:    agentInstructions,
-			AppRegistry:          appRegistry,
-			DataDir:              cfg.DataDir,
+			ProjectStorageDataset:   cfg.ProjectStorageDataset,
+			PersistentDiskQuota:     cfg.PersistentDiskQuota,
+			PersistentQuotaRequired: cfg.PersistentQuotaRequired,
+			DiskWarningPercent:      float64(cfg.DiskWarningPercent),
+			DefaultRootDiskQuota:    cfg.DefaultRootDiskQuota,
+			AgentInstructions:       agentInstructions,
+			AppRegistry:             appRegistry,
+			DataDir:                 cfg.DataDir,
 		},
 	)
 

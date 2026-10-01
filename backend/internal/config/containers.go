@@ -21,6 +21,7 @@ import (
 	containerscheduletools "github.com/futrx-com/remote.futrx.com/internal/integration/containers/scheduletools"
 	containerworkspace "github.com/futrx-com/remote.futrx.com/internal/integration/containers/workspace"
 	"github.com/futrx-com/remote.futrx.com/internal/integration/hostfs"
+	"github.com/futrx-com/remote.futrx.com/internal/integration/projectstorage"
 	"github.com/futrx-com/remote.futrx.com/internal/integration/storagemetrics"
 	servicebrowser "github.com/futrx-com/remote.futrx.com/internal/service/container/browser"
 	servicecli "github.com/futrx-com/remote.futrx.com/internal/service/container/cli"
@@ -59,10 +60,13 @@ type ContainerStack struct {
 // ContainerStackOptions supplies presentation and installation-specific
 // dependencies to the container composition root.
 type ContainerStackOptions struct {
-	DiskWarningPercent   float64
-	DefaultRootDiskQuota string
-	AgentInstructions    []byte
-	ImageBuildProgress   serviceimage.ProgressReporter
+	ProjectStorageDataset   string
+	PersistentDiskQuota     string
+	PersistentQuotaRequired bool
+	DiskWarningPercent      float64
+	DefaultRootDiskQuota    string
+	AgentInstructions       []byte
+	ImageBuildProgress      serviceimage.ProgressReporter
 	// AppRegistry is the installable-application catalog. When non-nil the stack
 	// builds the application installer/port-allocator over the same lxc runner.
 	AppRegistry *containerapplications.Registry
@@ -145,6 +149,7 @@ func NewContainerStack(
 		scheduleTools,
 	)
 	resources := containerresources.NewManager(runner).WithDefaultDisk(options.DefaultRootDiskQuota)
+	persistent := projectstorage.New(fileproject.WorkspaceRoot, options.ProjectStorageDataset, options.PersistentDiskQuota, options.PersistentQuotaRequired)
 	lifecycle := servicelifecycle.NewService(
 		containerlifecycle.NewClient(runner),
 		serviceimage.Alias,
@@ -153,6 +158,7 @@ func NewContainerStack(
 		launchProvisioner,
 		profiles,
 	)
+	lifecycle.WithPersistentStorage(persistent)
 	inspectionAdapter := containerinspection.NewAdapter(
 		runner,
 		profiles,
@@ -175,7 +181,7 @@ func NewContainerStack(
 	}
 
 	return ContainerStack{
-		Storage:       storagemetrics.New(fileproject.WorkspaceRoot, options.DiskWarningPercent),
+		Storage:       storagemetrics.New(fileproject.WorkspaceRoot, options.DiskWarningPercent).WithQuotaReader(persistent),
 		Lifecycle:     lifecycle,
 		Inspection:    inspection,
 		Credentials:   credentials,
