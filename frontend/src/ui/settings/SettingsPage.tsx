@@ -1,3 +1,4 @@
+import { AuditLogPanel } from "./AuditLogPanel";
 import { PermissionsSettings } from "./PermissionsSettings";
 import type { AppearanceTheme } from "../../models/settings";
 import type { UserDirectory } from "../../state/hooks/users/useUserDirectory";
@@ -41,6 +42,7 @@ const tabs: Array<{
   description: string;
   Icon: ComponentType<{ class?: string }>;
 }> = [
+ { id: "audit", label: "Audit log", description: "Review activity by user, project, action and date.", Icon: Activity },
   {
     id: "appearance",
     label: "Appearance",
@@ -219,6 +221,7 @@ export function SettingsPage({
               </p>
             </header>
 
+            {activeTab === "audit" && isAdmin && <AuditLogPanel />}
             {activeTab === "appearance" && (
               <AppearanceSettings
                 theme={appearanceTheme}

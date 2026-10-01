@@ -119,3 +119,10 @@ func (v *AccessVerifier) verifyWorkspace(ctx context.Context, sessionCookie, pro
 	}
 	return workspaceide.RequireAccess(ctx, v.ideAuthorizer, string(project.ID))
 }
+
+func (v *AccessVerifier) ProjectForAudit(ctx context.Context, slug string) (serviceproject.Meta, error) {
+	if v.projects == nil {
+		return serviceproject.Meta{}, ErrProjectNotFound
+	}
+	return v.projects.GetBySlug(ctx, slug)
+}

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	serviceaudit "github.com/futrx-com/remote.futrx.com/internal/service/audit"
 	"net/http"
 
 	"github.com/futrx-com/remote.futrx.com/internal/rbac"
@@ -18,6 +19,7 @@ import (
 // agent module catalog. Provider packages configure those flows; HTTP owns only
 // route, access-control, and response policy.
 type AgentAuthHandler struct {
+	audit         serviceaudit.Recorder
 	accountAccess *agentaccountaccess.Service
 	bindings      []agentauth.Binding
 	modules       agentModuleDescriptors
@@ -196,6 +198,7 @@ func (h *AgentAuthHandler) handleCodeStart(binding agentauth.Binding, w http.Res
 	}
 
 	result, err := binding.StartCode(r.Context())
+	h.recordAgentAuth(r, binding, serviceaudit.ActionSettingsAgentConnect, "start", err)
 	if err != nil {
 		httptransport.SendErr(w, http.StatusInternalServerError, err.Error())
 		return
@@ -219,7 +222,9 @@ func (h *AgentAuthHandler) handleCodeSubmit(binding agentauth.Binding, w http.Re
 		httptransport.SendErr(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	if err := binding.SubmitCode(r.Context(), body.Code); err != nil {
+	err := binding.SubmitCode(r.Context(), body.Code)
+	h.recordAgentAuth(r, binding, serviceaudit.ActionSettingsAgentConnect, "code", err)
+	if err != nil {
 		status := http.StatusInternalServerError
 		if binding.IsCodeInputError(err) {
 			status = http.StatusBadRequest
@@ -234,7 +239,9 @@ func (h *AgentAuthHandler) handleCodeCancel(binding agentauth.Binding, w http.Re
 	if !h.requireMutationAccess(w, r) {
 		return
 	}
-	if err := binding.CancelCode(r.Context()); err != nil {
+	err := binding.CancelCode(r.Context())
+	h.recordAgentAuth(r, binding, serviceaudit.ActionSettingsAgentDisconnect, "cancel", err)
+	if err != nil {
 		httptransport.SendErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -250,6 +257,7 @@ func (h *AgentAuthHandler) handleDeviceStart(binding agentauth.Binding, w http.R
 		return
 	}
 	state, err := binding.StartDevice(r.Context())
+	h.recordAgentAuth(r, binding, serviceaudit.ActionSettingsAgentConnect, "device", err)
 	if err != nil {
 		httptransport.SendErr(w, http.StatusInternalServerError, err.Error())
 		return
@@ -420,4 +428,23 @@ func readJSONBody(r *http.Request, v any) error {
 		return fmt.Errorf("invalid json: %w", err)
 	}
 	return nil
+}
+
+func (h *AgentAuthHandler) WithAudit(recorder serviceaudit.Recorder) *AgentAuthHandler {
+	h.audit = recorder
+	return h
+}
+
+func (h *AgentAuthHandler) recordAgentAuth(
+	r *http.Request,
+	binding agentauth.Binding,
+	action, step string,
+	err error,
+) {
+	recordAudit(
+		h.audit, r, action,
+		serviceaudit.Target{Type: serviceaudit.TargetAgent, ID: string(binding.ID()), Name: string(binding.ID())},
+		serviceaudit.Meta{"step": step},
+		err,
+	)
 }

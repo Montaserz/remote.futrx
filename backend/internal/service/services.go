@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/futrx-com/remote.futrx.com/internal/service/audit"
 	"log"
 	"time"
 
@@ -61,32 +62,34 @@ type PushStore interface {
 }
 
 type Dependencies struct {
-	Chats             ChatStore
-	Projects          serviceproject.Repository
-	ProjectSecrets    serviceproject.SecretsRepository
-	ProjectAccess     serviceproject.AccessRepository
-	ProjectShares     serviceshare.Repository
-	Permissions       *servicepermission.Service
-	Schedules         serviceschedule.Repository
-	Auth              *serviceauth.Service
-	Users             serviceuser.Repository
-	UserSettings      serviceusersettings.Repository
-	TwoFactor         serviceauth.TwoFactorStore
-	SessionRegistry   serviceauth.SessionRegistryStore
-	Push              PushStore
-	Usage             serviceusage.Repository
-	AgentQuota        agentquota.Repository
-	AuthBaseURL       string
-	ProjectContainers serviceproject.ContainerDependencies
-	AgentContainers   provisioning.ContainerDependencies
-	AgentModules      *agentmodule.Catalog
-	AgentAPIKeys      agentauth.APIKeyStore
-	AgentAccounts     agentauth.AccountStore
-	AgentOptions      AgentOptions
-	TmuxClient        TmuxClient
-	ValidTmuxName     func(string) bool
-	ScheduleLimits    ScheduleLimits
-	PromptStartGate   prompt.StartGate
+	AuditRetentionMonths *int
+	Audit                audit.Store
+	Chats                ChatStore
+	Projects             serviceproject.Repository
+	ProjectSecrets       serviceproject.SecretsRepository
+	ProjectAccess        serviceproject.AccessRepository
+	ProjectShares        serviceshare.Repository
+	Permissions          *servicepermission.Service
+	Schedules            serviceschedule.Repository
+	Auth                 *serviceauth.Service
+	Users                serviceuser.Repository
+	UserSettings         serviceusersettings.Repository
+	TwoFactor            serviceauth.TwoFactorStore
+	SessionRegistry      serviceauth.SessionRegistryStore
+	Push                 PushStore
+	Usage                serviceusage.Repository
+	AgentQuota           agentquota.Repository
+	AuthBaseURL          string
+	ProjectContainers    serviceproject.ContainerDependencies
+	AgentContainers      provisioning.ContainerDependencies
+	AgentModules         *agentmodule.Catalog
+	AgentAPIKeys         agentauth.APIKeyStore
+	AgentAccounts        agentauth.AccountStore
+	AgentOptions         AgentOptions
+	TmuxClient           TmuxClient
+	ValidTmuxName        func(string) bool
+	ScheduleLimits       ScheduleLimits
+	PromptStartGate      prompt.StartGate
 
 	// Installable-application capabilities. When AppStore and
 	// AppRegistry are set the Applications service is enabled.
@@ -140,6 +143,7 @@ type AuthOptions struct {
 }
 
 type Services struct {
+	Audit             *audit.Service
 	AccountAccess     *agentaccountaccess.Service
 	Chats             *servicechat.Service
 	ChatAccess        *servicechat.AccessService
@@ -204,6 +208,13 @@ func New(ctx context.Context, deps Dependencies) (Services, error) {
 	// Authentication and authorization are built by the composition root and
 	// injected, so this layer knows neither their stores nor their adapters.
 	authService := deps.Auth
+	auditOptions := []audit.Option{}
+	if deps.AuditRetentionMonths != nil {
+		auditOptions = append(auditOptions, audit.WithRetentionMonths(*deps.AuditRetentionMonths))
+	}
+	auditService := audit.New(deps.Audit, auditOptions...)
+	auditService.StartJanitor(ctx, 0)
+	deps.Auth.WithAudit(auditService)
 	permissionService := deps.Permissions
 	projects := notifyingProjectRepository{Repository: deps.Projects, workspace: workspace}
 	projectService := serviceproject.New(
@@ -211,6 +222,7 @@ func New(ctx context.Context, deps Dependencies) (Services, error) {
 		deps.ProjectContainers,
 		deps.ProjectSecrets,
 		deps.ProjectAccess,
+		serviceproject.WithAudit(auditService),
 		serviceproject.WithAuthorizer(permissionService),
 		serviceproject.WithChatCleanup(projectChatCleanup{
 			chats: chats,
@@ -226,7 +238,7 @@ func New(ctx context.Context, deps Dependencies) (Services, error) {
 		Projects:              agentProjectResolver{projects: projectService},
 		Containers:            deps.AgentContainers,
 		APIKeys:               deps.AgentAPIKeys,
-		Accounts:              agentauth.NewAccountVault(deps.AgentAccounts, permissionService),
+		Accounts:              agentauth.NewAccountVault(deps.AgentAccounts, permissionService).WithAudit(auditService),
 		CredentialSyncTimeout: deps.AgentOptions.CredentialSyncTimeout,
 	})
 	if err != nil {
@@ -255,6 +267,7 @@ func New(ctx context.Context, deps Dependencies) (Services, error) {
 		servicechat.WithCopiedEventAppender(chats),
 		servicechat.WithSessionPolicy(agentRuntime),
 		servicechat.WithProviderPolicy(agentRuntime),
+		servicechat.WithAudit(auditService),
 		servicechat.WithAuthorizer(permissionService),
 		servicechat.WithAccountAccess(accountAccess),
 	)
@@ -262,7 +275,7 @@ func New(ctx context.Context, deps Dependencies) (Services, error) {
 	pushService := newPush(deps.Push, deps.AuthBaseURL)
 	userService := serviceuser.New(
 		deps.Users,
-		serviceuser.WithRemovalCleanup(userRemovalCleanup{
+		serviceuser.WithAudit(auditService), serviceuser.WithRemovalCleanup(userRemovalCleanup{
 			projects:        projectService,
 			permissions:     permissionService,
 			subscriptions:   deps.Push,
@@ -273,6 +286,7 @@ func New(ctx context.Context, deps Dependencies) (Services, error) {
 	scheduleCaps := schedulecapability.New(deps.AuthBaseURL)
 	var usageService *serviceusage.Service
 	promptOptions := []prompt.Option{
+		prompt.WithAudit(auditService),
 		prompt.WithScheduleToolIssuer(scheduleCaps),
 		prompt.WithAgentPolicy(agentRuntime),
 	}
@@ -302,6 +316,7 @@ func New(ctx context.Context, deps Dependencies) (Services, error) {
 		projectService,
 		authService,
 		scheduledPromptExecutor{prompts: promptService},
+		serviceschedule.WithAudit(auditService),
 		serviceschedule.WithMinInterval(deps.ScheduleLimits.MinInterval),
 		serviceschedule.WithMaxConcurrentRuns(deps.ScheduleLimits.MaxConcurrentRuns),
 		serviceschedule.WithMaxTasksPerProject(deps.ScheduleLimits.MaxTasksPerProject),
@@ -359,7 +374,7 @@ func New(ctx context.Context, deps Dependencies) (Services, error) {
 	pushNotifier.audience.users = userService
 
 	return Services{
-		AccountAccess:     accountAccess,
+		Audit: auditService, AccountAccess: accountAccess,
 		Chats:             chatService,
 		ChatAccess:        chatAccessService,
 		Projects:          projectService,

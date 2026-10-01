@@ -10,15 +10,16 @@ import (
 )
 
 type Config struct {
-	Host         string
-	Port         string
-	DataDir      string
-	InstallDir   string
-	BaseURL      string
-	Agent        AgentOptions
-	Auth         AuthOptions
-	Applications ApplicationOptions
-	Schedule     ScheduleLimits
+	AuditRetentionMonths int
+	Host                 string
+	Port                 string
+	DataDir              string
+	InstallDir           string
+	BaseURL              string
+	Agent                AgentOptions
+	Auth                 AuthOptions
+	Applications         ApplicationOptions
+	Schedule             ScheduleLimits
 }
 
 // ApplicationOptions are application-wide settings for installable application
@@ -85,11 +86,12 @@ type ScheduleLimits struct {
 
 func Load() Config {
 	return Config{
-		Host:       envDefault("HOST", "127.0.0.1"),
-		Port:       envDefault("PORT", "7682"),
-		DataDir:    envDefault("DATA_DIR", "/opt/remote.futrx/data"),
-		InstallDir: envDefault("INSTALL_DIR", "/opt/remote.futrx"),
-		BaseURL:    envDefault("BASE_URL", ""),
+		AuditRetentionMonths: envInt("AUDIT_RETENTION_MONTHS", 12),
+		Host:                 envDefault("HOST", "127.0.0.1"),
+		Port:                 envDefault("PORT", "7682"),
+		DataDir:              envDefault("DATA_DIR", "/opt/remote.futrx/data"),
+		InstallDir:           envDefault("INSTALL_DIR", "/opt/remote.futrx"),
+		BaseURL:              envDefault("BASE_URL", ""),
 		Agent: AgentOptions{
 			CapabilityTimeout:          envDuration("AGENT_CAPABILITY_TIMEOUT", 30*time.Second),
 			HostCLIVersionTimeout:      15 * time.Second,

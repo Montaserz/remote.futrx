@@ -180,27 +180,29 @@ func main() {
 	}
 
 	serviceSet, err := service.New(ctx, service.Dependencies{
-		Chats:             storeSet.Chats,
-		Projects:          storeSet.Projects,
-		ProjectSecrets:    storeSet.ProjectSecrets,
-		ProjectAccess:     storeSet.ProjectAccess,
-		ProjectShares:     storeSet.ProjectShares,
-		Permissions:       permissionService,
-		Schedules:         storeSet.Schedules,
-		Auth:              authService,
-		Users:             storeSet.Users,
-		UserSettings:      storeSet.UserSettings,
-		TwoFactor:         storeSet.TwoFactor,
-		SessionRegistry:   storeSet.SessionRegistry,
-		Push:              storeSet.Push,
-		Usage:             storeSet.Usage,
-		AgentQuota:        storeSet.AgentQuota,
-		AuthBaseURL:       cfg.BaseURL,
-		ProjectContainers: containerStack.ProjectDependencies(),
-		AgentContainers:   containerStack.AgentDependencies(),
-		AgentModules:      agentModules,
-		AgentAPIKeys:      storeSet.AgentAPIKeys,
-		AgentAccounts:     storeSet.AgentAccounts,
+		AuditRetentionMonths: &cfg.AuditRetentionMonths,
+		Audit:                storeSet.Audit,
+		Chats:                storeSet.Chats,
+		Projects:             storeSet.Projects,
+		ProjectSecrets:       storeSet.ProjectSecrets,
+		ProjectAccess:        storeSet.ProjectAccess,
+		ProjectShares:        storeSet.ProjectShares,
+		Permissions:          permissionService,
+		Schedules:            storeSet.Schedules,
+		Auth:                 authService,
+		Users:                storeSet.Users,
+		UserSettings:         storeSet.UserSettings,
+		TwoFactor:            storeSet.TwoFactor,
+		SessionRegistry:      storeSet.SessionRegistry,
+		Push:                 storeSet.Push,
+		Usage:                storeSet.Usage,
+		AgentQuota:           storeSet.AgentQuota,
+		AuthBaseURL:          cfg.BaseURL,
+		ProjectContainers:    containerStack.ProjectDependencies(),
+		AgentContainers:      containerStack.AgentDependencies(),
+		AgentModules:         agentModules,
+		AgentAPIKeys:         storeSet.AgentAPIKeys,
+		AgentAccounts:        storeSet.AgentAccounts,
 		AgentOptions: service.AgentOptions{
 			CapabilityTimeout:          cfg.Agent.CapabilityTimeout,
 			CapabilityCacheTTL:         cfg.Agent.CapabilityCacheTTL,
@@ -270,6 +272,7 @@ func main() {
 		log.Fatalf("configure IDE URL: %v", err)
 	}
 
+	selfUpdateService.WithAudit(serviceSet.Audit)
 	handler, err := transport.NewHTTPHandler(transport.Dependencies{
 		Services:       serviceSet,
 		TmuxClient:     tmuxClient,

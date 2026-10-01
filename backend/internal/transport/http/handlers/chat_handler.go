@@ -3,6 +3,7 @@ package httphandlers
 import (
 	"encoding/json"
 	"errors"
+	serviceaudit "github.com/futrx-com/remote.futrx.com/internal/service/audit"
 	"io"
 	"mime"
 	"net/http"
@@ -26,6 +27,7 @@ type ChatHandler struct {
 	history   *servicegithistory.Service
 	ide       *serviceworkspaceide.Service
 	schedules *ScheduleHandler
+	audit     serviceaudit.Recorder
 }
 
 func NewChatHandler(
@@ -49,6 +51,19 @@ func NewChatHandler(
 func (h *ChatHandler) WithSchedules(schedules *ScheduleHandler) *ChatHandler {
 	h.schedules = schedules
 	return h
+}
+
+// WithAudit records the workspace actions this handler owns directly: file
+// downloads, archive downloads, IDE hand-offs, and git checkouts.
+func (h *ChatHandler) WithAudit(recorder serviceaudit.Recorder) *ChatHandler {
+	h.audit = recorder
+	return h
+}
+
+// auditWorkspaceTarget labels a workspace action by the chat it came through,
+// keeping the project id in meta so a query can pivot either way.
+func auditWorkspaceTarget(meta servicechat.Meta) serviceaudit.Target {
+	return serviceaudit.Target{Type: serviceaudit.TargetChat, ID: string(meta.ID), Name: meta.Title}
 }
 
 func (h *ChatHandler) RegisterRoutes(mux *http.ServeMux) {
@@ -320,6 +335,7 @@ func (h *ChatHandler) handleIDEOpen(w http.ResponseWriter, r *http.Request, meta
 		return
 	}
 	redirectURL, err := h.ide.OpenURL(r.Context(), string(meta.ProjectID), meta.Cwd, r.URL.Query().Get("path"))
+	recordAudit(h.audit, r, serviceaudit.ActionWorkspaceIDEOpen, auditWorkspaceTarget(meta), serviceaudit.Meta{"projectId": string(meta.ProjectID)}, err)
 	if err != nil {
 		if errors.Is(err, permission.ErrDenied) || errors.Is(err, permission.ErrActorRequired) {
 			sendPermissionError(w, err)

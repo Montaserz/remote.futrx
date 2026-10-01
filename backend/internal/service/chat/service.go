@@ -2,6 +2,7 @@ package chat
 
 import (
 	"context"
+	"github.com/futrx-com/remote.futrx.com/internal/service/audit"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,6 +13,7 @@ import (
 )
 
 type Service struct {
+	audit                audit.Recorder
 	accountAccess        AccountAccess
 	selectionMu          sync.Mutex
 	authorizer           Authorizer
@@ -107,7 +109,8 @@ func (s *Service) Get(ctx context.Context, id ID) (Meta, error) {
 	return s.withRunning(meta), nil
 }
 
-func (s *Service) Create(ctx context.Context, in CreateInput) (Meta, error) {
+func (s *Service) Create(ctx context.Context, in CreateInput) (result Meta, resultErr error) {
+	defer func() { s.recordChat(ctx, "chat.create", result, result.ID, resultErr) }()
 	if err := s.requireCreate(ctx, in.ProjectID); err != nil {
 		return Meta{}, err
 	}
@@ -171,7 +174,8 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (Meta, error) {
 // metadata and full visible history, plus a pending fork of the underlying
 // agent session. The fork materializes on the next prompt through each
 // provider's native fork mechanism, so the parent is never mutated.
-func (s *Service) Fork(ctx context.Context, id ID) (Meta, error) {
+func (s *Service) Fork(ctx context.Context, id ID) (result Meta, resultErr error) {
+	defer func() { s.recordChat(ctx, "chat.fork", result, result.ID, resultErr) }()
 	if !ValidID(id) {
 		return Meta{}, ErrInvalidID
 	}
@@ -411,7 +415,12 @@ func (s *Service) withRunning(meta Meta) Meta {
 	return meta
 }
 
-func (s *Service) Delete(ctx context.Context, id ID) error {
+func (s *Service) Delete(ctx context.Context, id ID) (resultErr error) {
+	var existing Meta
+	if s.audit != nil {
+		existing, _ = s.repo.Get(ctx, id)
+	}
+	defer func() { s.recordChat(ctx, "chat.delete", existing, id, resultErr) }()
 	if !ValidID(id) {
 		return ErrInvalidID
 	}
@@ -479,4 +488,20 @@ func (s *Service) UploadTarget(ctx context.Context, id ID) (string, error) {
 		}
 	}
 	return filepath.Join(root, ".uploads"), nil
+}
+
+func WithAudit(recorder audit.Recorder) Option {
+	return func(s *Service) { s.audit = audit.RecorderOrNop(recorder) }
+}
+
+func (s *Service) recordChat(ctx context.Context, action string, meta Meta, id ID, err error) {
+	if s == nil || s.audit == nil {
+		return
+	}
+	target := audit.Target{Type: audit.TargetChat, ID: string(id), Name: meta.Title}
+	entryMeta := audit.Meta{}
+	if meta.ProjectID != "" {
+		entryMeta["projectId"] = string(meta.ProjectID)
+	}
+	s.audit.Record(ctx, audit.Result(action, target, entryMeta, err))
 }

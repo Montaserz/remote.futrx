@@ -3,6 +3,8 @@ package stores
 import (
 	"context"
 	"fmt"
+	"github.com/futrx-com/remote.futrx.com/internal/service/audit"
+	"github.com/futrx-com/remote.futrx.com/internal/stores/fileaudit"
 
 	servicepermission "github.com/futrx-com/remote.futrx.com/internal/rbac"
 	agentauth "github.com/futrx-com/remote.futrx.com/internal/service/agent/auth"
@@ -61,6 +63,7 @@ type PushStore interface {
 }
 
 type Stores struct {
+	Audit           audit.Store
 	Chats           ChatStore
 	chatIndexWarmer recentChatIndexWarmer
 	Projects        serviceproject.Repository
@@ -92,6 +95,10 @@ func (stores Stores) WarmRecentChatIndexes(ctx context.Context, limit int) error
 }
 
 func New(dataDir string) (Stores, error) {
+	auditStore, err := fileaudit.New(dataDir)
+	if err != nil {
+		return Stores{}, err
+	}
 	chats, err := filechat.New(dataDir)
 	if err != nil {
 		return Stores{}, fmt.Errorf("init chat store: %w", err)
@@ -168,7 +175,7 @@ func New(dataDir string) (Stores, error) {
 
 	authStore := fileauth.New(dataDir)
 	return Stores{
-		Chats:           chats,
+		Audit: auditStore, Chats: chats,
 		chatIndexWarmer: chats,
 		Projects:        projects,
 		ProjectSecrets:  projectSecrets,

@@ -2,6 +2,7 @@ package httphandlers
 
 import (
 	"errors"
+	serviceaudit "github.com/futrx-com/remote.futrx.com/internal/service/audit"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -57,6 +58,16 @@ func (h *authVerifyHandler) verify(w http.ResponseWriter, r *http.Request) {
 		err = h.access.Verify(r.Context(), httptransport.SessionCookieValue(r), matchedSlug)
 	}
 	if err == nil {
+		if ideRequest && r.Header.Get("Sec-Fetch-Dest") == "document" {
+			entry := serviceaudit.Success(serviceaudit.ActionWorkspaceIDEOpen, serviceaudit.Target{Type: serviceaudit.TargetProject}, nil)
+			if project, e := h.access.ProjectForAudit(r.Context(), ideSlug); e == nil {
+				entry.Target.ID = string(project.ID)
+			}
+			if session, e := h.auth.CurrentSession(r.Context(), httptransport.SessionCookieValue(r)); e == nil && session != nil {
+				entry.Actor.Email = session.Email
+			}
+			h.auth.Audit().Record(r.Context(), entry)
+		}
 		w.WriteHeader(http.StatusOK)
 		return
 	}

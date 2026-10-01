@@ -20,6 +20,7 @@ type Middleware interface {
 }
 
 type Handlers struct {
+	Audit             RouteRegistrar
 	Sessions          RouteRegistrar
 	Chats             RouteRegistrar
 	Projects          RouteRegistrar
@@ -102,6 +103,9 @@ func NewHandler(handlers Handlers) http.Handler {
 		mux.Handle("/", handlers.Static)
 	}
 
+	if handlers.Audit != nil {
+		handlers.Audit.RegisterRoutes(mux)
+	}
 	var handler http.Handler = mux
 	if handlers.Workspace != nil {
 		handler = handlers.Workspace.Wrap(handler)
