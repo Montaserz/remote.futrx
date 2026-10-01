@@ -12,6 +12,7 @@ import (
 	serviceauth "github.com/futrx-com/remote.futrx.com/internal/service/auth"
 	servicechat "github.com/futrx-com/remote.futrx.com/internal/service/chat"
 	serviceproject "github.com/futrx-com/remote.futrx.com/internal/service/project"
+	"github.com/futrx-com/remote.futrx.com/internal/service/workspaceide"
 	"github.com/futrx-com/remote.futrx.com/internal/stores/fileauth"
 	"github.com/futrx-com/remote.futrx.com/internal/stores/filepermissions"
 	"github.com/futrx-com/remote.futrx.com/internal/stores/fileproject"
@@ -124,7 +125,7 @@ func newMembershipPermissions(
 		t.Fatal(err)
 	}
 	registry, err := servicepermission.NewRegistry(
-		servicepermission.ManagementDefinitions(), serviceproject.PermissionDefinitions(), servicechat.PermissionDefinitions(),
+		servicepermission.ManagementDefinitions(), serviceproject.PermissionDefinitions(), servicechat.PermissionDefinitions(), workspaceide.PermissionDefinitions(),
 	)
 	if err != nil {
 		t.Fatal(err)

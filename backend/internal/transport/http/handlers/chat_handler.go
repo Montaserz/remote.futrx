@@ -315,9 +315,17 @@ func (h *ChatHandler) handleIDEOpen(w http.ResponseWriter, r *http.Request, meta
 		httptransport.SendErr(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
-	redirectURL, err := h.ide.OpenURL(meta.Cwd, r.URL.Query().Get("path"))
+	if h.ide == nil {
+		httptransport.SendErr(w, 503, "IDE unavailable")
+		return
+	}
+	redirectURL, err := h.ide.OpenURL(r.Context(), string(meta.ProjectID), meta.Cwd, r.URL.Query().Get("path"))
 	if err != nil {
-		httptransport.SendErr(w, http.StatusBadRequest, err.Error())
+		if errors.Is(err, permission.ErrDenied) || errors.Is(err, permission.ErrActorRequired) {
+			sendPermissionError(w, err)
+		} else {
+			httptransport.SendErr(w, http.StatusBadRequest, err.Error())
+		}
 		return
 	}
 	http.Redirect(w, r, redirectURL, http.StatusFound)

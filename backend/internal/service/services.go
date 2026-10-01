@@ -323,7 +323,7 @@ func New(ctx context.Context, deps Dependencies) (Services, error) {
 	)
 	var accessVerifier *serviceauth.AccessVerifier
 	if authService != nil {
-		accessVerifier = serviceauth.NewAccessVerifier(authService, projectService)
+		accessVerifier = serviceauth.NewAccessVerifier(authService, projectService).WithIDEAuthorizer(permissionService)
 	}
 	var shareService *serviceshare.Service
 	if deps.ProjectShares != nil {

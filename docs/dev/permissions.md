@@ -213,3 +213,30 @@ comes from authenticated middleware. Unknown fields, extra JSON values and
 oversized bodies are rejected. Mutation audit and persistence are unchanged.
 Creation controls refresh on focus, local policy changes and periodically;
 server authorization runs on every operation regardless of UI freshness.
+
+## IDE access
+
+`workspace.ide.open` is a project-scoped, delegable permission with the
+project-member baseline. Assign a Deny or bind a denying role to restrict the
+built-in IDE. `workspace.hostide.open` separately gates open-file requests from
+host chats at platform scope (registered-user baseline).
+
+Both the IDE open-file service and the authenticated edge verifier use the
+same current policy. The edge checks project membership as well as permission.
+It covers `code.<host>/<slug>/`, `<slug>.code.<host>` and preview URLs for the
+reserved IDE listeners (8842 and 8081). Public preview shares cannot authorize
+these IDE requests. The launcher shell and API keep their existing session and
+API authorization. A policy error or missing authorizer fails closed.
+
+Forward-auth does not pass through API middleware; its reviewed actor-creation
+entry point validates the session and registration before attaching the actor.
+Forwarded username headers are never identity inputs. The chat header hides
+its IDE button when permission is unavailable or denied. Saved links and
+open-file links still receive server-side enforcement.
+
+Revocation blocks subsequent HTTP requests and WebSocket handshakes using the
+same existing login session. It does not forcibly disconnect an already-open
+IDE WebSocket. This controls Remote's built-in IDE entry points, not arbitrary
+software installed by a user with authorized shell or agent execution. An IDE
+itself can expose terminal and filesystem access; these are not independent
+sandbox boundaries.
