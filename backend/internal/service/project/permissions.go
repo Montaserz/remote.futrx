@@ -9,6 +9,7 @@ import (
 // Permissions owned by the project service. Keys are stable persisted
 // identifiers; renaming one needs a store migration or a declared alias.
 const (
+	PermissionCreate permission.Key = "projects.project.create"
 	// PermissionLifecycleManage gates starting, stopping, restarting, and
 	// repairing the network of a project's container.
 	PermissionLifecycleManage permission.Key = "projects.lifecycle.manage"
@@ -17,10 +18,11 @@ const (
 )
 
 // PermissionDefinitions declares the permissions this service enforces. The
-// composition root registers them. Both use the project-member baseline so
-// members keep the access they had before these permissions existed.
+// composition root registers them. Compatibility baselines preserve existing
+// registered-user creation and project-member lifecycle/access behavior.
 func PermissionDefinitions() []permission.Definition {
 	return []permission.Definition{
+		{Key: PermissionCreate, Description: "Create a project.", Scopes: []permission.ScopeKind{permission.ScopePlatform}, Baseline: permission.BaselineAuthenticated, Delegable: true},
 		{
 			Key:         PermissionLifecycleManage,
 			Description: "Start, stop, restart, and repair the network of a project's container.",

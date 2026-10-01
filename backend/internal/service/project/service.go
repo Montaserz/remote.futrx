@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	permission "github.com/futrx-com/remote.futrx.com/internal/rbac"
 	"log"
 	"regexp"
 	"strconv"
@@ -160,6 +161,9 @@ func (s *Service) WorkspaceForProject(ctx context.Context, id ID) (string, error
 // Create provisions a new project. callerEmail (if non-empty) is added to
 // the project's access list so the creator immediately has access.
 func (s *Service) Create(ctx context.Context, in CreateInput, callerEmail string) (Meta, error) {
+	if err := s.authorizer.Require(ctx, permission.Check{Permission: PermissionCreate, Scope: permission.PlatformScope()}); err != nil {
+		return Meta{}, err
+	}
 	name := strings.TrimSpace(in.Name)
 	if name == "" {
 		return Meta{}, ErrNameRequired

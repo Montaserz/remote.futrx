@@ -34,6 +34,7 @@ import (
 	"github.com/futrx-com/remote.futrx.com/internal/rbac"
 	service "github.com/futrx-com/remote.futrx.com/internal/service"
 	serviceauth "github.com/futrx-com/remote.futrx.com/internal/service/auth"
+	servicechat "github.com/futrx-com/remote.futrx.com/internal/service/chat"
 	servicegithistory "github.com/futrx-com/remote.futrx.com/internal/service/githistory"
 	servicemaintenance "github.com/futrx-com/remote.futrx.com/internal/service/maintenance"
 	serviceproject "github.com/futrx-com/remote.futrx.com/internal/service/project"
@@ -333,6 +334,7 @@ func permissionDefinitions() [][]rbac.Definition {
 	return [][]rbac.Definition{
 		rbac.ManagementDefinitions(),
 		serviceproject.PermissionDefinitions(),
+		servicechat.PermissionDefinitions(),
 	}
 }
 

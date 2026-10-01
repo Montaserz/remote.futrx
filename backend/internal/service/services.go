@@ -252,6 +252,7 @@ func New(ctx context.Context, deps Dependencies) (Services, error) {
 		servicechat.WithCopiedEventAppender(chats),
 		servicechat.WithSessionPolicy(agentRuntime),
 		servicechat.WithProviderPolicy(agentRuntime),
+		servicechat.WithAuthorizer(permissionService),
 	)
 	chatAccessService := servicechat.NewAccessService(chatService, projectService)
 	pushService := newPush(deps.Push, deps.AuthBaseURL)

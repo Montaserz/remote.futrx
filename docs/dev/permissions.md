@@ -156,10 +156,60 @@ actors, and nothing creates a permission definition at runtime.
 
 ## Known limitations
 
-- A service-level `ErrDenied` currently surfaces as a generic `500`, not `403`.
+- Permission denials on chat/project and policy-management routes return `403`.
 - Handler-level admin gates still apply ahead of the service.
-- No management API or UI yet; policy changes go through `Services.Permissions`.
-- Only `projects.lifecycle.manage` and `projects.access.manage` are enforced.
+- Settings → Users → Permissions and the authenticated API use `Services.Permissions`.
+- Creation, `projects.lifecycle.manage` and `projects.access.manage` are enforced.
   Agent runs, the agent browser, and installed applications start containers
   under their own capability.
 - Project existence is not validated when assigning at `project:<id>`.
+
+## Policy administration and creation controls
+
+Settings → Users → Permissions exposes the existing policy service. A user
+needs `permissions.assignments.manage` or `permissions.roles.manage` to read
+policy. Each mutation still checks its own management permission and the
+existing delegation rules under the store lock. The UI does not replace those
+checks. Administrators remain the recovery path and cannot be denied access.
+
+Creation permissions are checked in the owning services before writes or
+provisioning:
+
+| Permission | Scope | Empty-policy baseline |
+| --- | --- | --- |
+| `projects.project.create` | platform | registered users |
+| `chats.host.create` | platform | registered users |
+| `chats.project.create` | project | project members |
+
+Forking a chat requires the same creation permission as creating one in that
+scope. Existing chat access checks still apply. Denying creation does not deny
+use of existing chats, agent execution, IDE access or terminal access. Those
+capabilities require separate permissions. Project lifecycle and member-list
+permissions from the foundation remain enforced. Permission denials on chat
+and project routes now return HTTP 403.
+
+To restrict a member from creating projects, select their registered email,
+Server scope, Create a project, and Deny. To restrict project chats, select the
+specific project and Create or fork a project chat. Platform rules do not
+cascade into projects. Create a role containing rules for one scope kind, then
+bind it to each user at the intended scope. A bound role must be unbound before
+deletion; editing it updates its existing bindings. Removing a rule restores
+the code-owned baseline unless another matching rule applies.
+
+Authenticated endpoints:
+
+- `GET /api/permissions`: authorized policy snapshot and code-owned definitions.
+- `GET /api/permissions/effective[?projectId=<id>]`: current actor's decisions
+  only; no other-user query and no policy records. Used for UI affordances.
+- `PUT/DELETE /api/permissions/assignments`: set/remove a direct rule.
+- `POST /api/permissions/roles`, `PUT/DELETE /api/permissions/roles/<id>`:
+  create/edit/delete roles.
+- `PUT/DELETE /api/permissions/bindings`: bind/unbind a role.
+
+Inputs use the existing RBAC field names (`UserEmail`, `Permission`, `Effect`,
+`Scope`, `RoleID`, `Name`, `Description`, `Rules`). Scope is
+`{"kind":"platform"}` or `{"kind":"project","id":"..."}`. Actor identity always
+comes from authenticated middleware. Unknown fields, extra JSON values and
+oversized bodies are rejected. Mutation audit and persistence are unchanged.
+Creation controls refresh on focus, local policy changes and periodically;
+server authorization runs on every operation regardless of UI freshness.

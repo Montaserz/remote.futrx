@@ -327,3 +327,19 @@ func TestBoundPermissionWithoutInjectedAuthorizerDenies(t *testing.T) {
 		}
 	}
 }
+
+func TestProjectCreationChecksPlatformPermissionBeforeProvisioning(t *testing.T) {
+	a := &recordingAuthorizer{err: permission.ErrDenied}
+	s := New(nil, ContainerDependencies{}, nil, nil, WithAuthorizer(a))
+	if _, err := s.Create(context.Background(), CreateInput{Name: "Denied"}, "member@example.com"); !errors.Is(err, permission.ErrDenied) {
+		t.Fatalf("Create: %v", err)
+	}
+	if len(a.checks) != 1 || a.checks[0] != (permission.Check{Permission: PermissionCreate, Scope: permission.PlatformScope()}) {
+		t.Fatalf("checks = %v", a.checks)
+	}
+	// Nil dependencies would panic if any repository/provisioning work ran.
+	s = New(nil, ContainerDependencies{}, nil, nil)
+	if _, err := s.Create(context.Background(), CreateInput{Name: "No actor"}, "member@example.com"); !errors.Is(err, permission.ErrActorRequired) {
+		t.Fatalf("missing actor: %v", err)
+	}
+}

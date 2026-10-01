@@ -10,6 +10,7 @@ import (
 
 	servicepermission "github.com/futrx-com/remote.futrx.com/internal/rbac"
 	serviceauth "github.com/futrx-com/remote.futrx.com/internal/service/auth"
+	servicechat "github.com/futrx-com/remote.futrx.com/internal/service/chat"
 	serviceproject "github.com/futrx-com/remote.futrx.com/internal/service/project"
 	"github.com/futrx-com/remote.futrx.com/internal/stores/fileauth"
 	"github.com/futrx-com/remote.futrx.com/internal/stores/filepermissions"
@@ -94,7 +95,7 @@ func newMembershipRoutesFixture(t *testing.T) membershipRoutesFixture {
 		serviceproject.WithAuthorizer(permissions),
 	)
 	project, err := projects.Create(
-		context.Background(), serviceproject.CreateInput{Name: "Members Only"}, "member@example.com",
+		adminContext(), serviceproject.CreateInput{Name: "Members Only"}, "member@example.com",
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -123,7 +124,7 @@ func newMembershipPermissions(
 		t.Fatal(err)
 	}
 	registry, err := servicepermission.NewRegistry(
-		servicepermission.ManagementDefinitions(), serviceproject.PermissionDefinitions(),
+		servicepermission.ManagementDefinitions(), serviceproject.PermissionDefinitions(), servicechat.PermissionDefinitions(),
 	)
 	if err != nil {
 		t.Fatal(err)
