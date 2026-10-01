@@ -9,7 +9,7 @@ the same changes twice.
 | Requested behavior | Implementation / focused PRs |
 | --- | --- |
 | Restrict project/chat creation and administer users/roles | Existing RBAC policies, scopes, assignments and effective decisions; #315 |
-| Restrict IDE, terminal, files, browser, secrets and project controls | Service/HTTP/WebSocket/forward-auth checks plus UI controls; #317, #324 |
+| Restrict IDE, terminal, files, browser, secrets and project controls | Service/HTTP/WebSocket/forward-auth checks plus UI controls; #317, #324 (including application web origins on the combined head) |
 | Assign multiple Claude/Codex accounts to users/roles; hide unauthorized accounts | Existing account vaults and per-chat run homes, account-scoped RBAC, filtered catalogs/quota/status and credential-time checks; #320 |
 | Persist user identity with prompts/runs and display it under prompts | Durable chat events, run records and forked history; #311 |
 | Audit creation, prompts/runs, IDE/terminal, Git, secrets, account usage and lifecycle; filter by user/project/action/date | Existing append-only audit store extended with project/run/account correlation, admin UI and filtered export; #325 |
@@ -27,11 +27,15 @@ On the combined branch:
 
 - Full backend `go test -timeout 3m ./...` passes, including application integration and composition tests.
 - Root/catalog `go test ./...` passes.
-- Frontend production build and all 542 frontend tests pass.
+- Frontend production build and all 547 frontend tests pass.
 - Race tests pass for RBAC, account access, chat/project/prompt services, account vault/execution, audit/chat stores, HTTP transport, resource quotas, storage metrics and instruction settings.
 - Backend `go vet ./...` passes.
 - Installer storage selection, LXD host environment and QA script tests pass.
 - Four simulated migration tests pass: read-only preflight, backup before move, rejection of running instances and no move after backup failure.
+
+Upstream qa `6829779d` is merged, retaining its disk-capacity admission checks
+and application recovery/origin isolation. Application web origins additionally
+check browser RBAC with a verified-session actor.
 
 Cross-feature checks caught and fixed a fork-attribution fixture that lacked the
 new RBAC actor, quota validation occurring after other resource mutations, and

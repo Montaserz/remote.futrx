@@ -102,7 +102,7 @@ func NewHTTPHandler(deps Dependencies) (http.Handler, error) {
 		deps.Services.Applications,
 		deps.Services.Auth,
 		deps.Services.Projects,
-	).WithWebHost(deps.PublicHostname)
+	).WithWebHost(deps.PublicHostname).WithWorkspaceAccess(deps.Services.Permissions)
 
 	handler := httptransport.NewHandler(httptransport.Handlers{
 		Audit:    httphandlers.NewAuditHandler(deps.Services.Audit, deps.Services.Auth),

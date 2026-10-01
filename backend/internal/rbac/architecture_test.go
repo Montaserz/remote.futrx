@@ -193,9 +193,10 @@ func TestActorConstructorsAreCalledOnlyFromReviewedEntryPoints(t *testing.T) {
 			"internal/rbac/actor.go",
 		},
 		"ContextWithActor": {
-			"internal/service/prompt/account_access.go",  // authenticated request actor or persisted schedule owner
-			"internal/transport/http/middleware/auth.go", // attaches the authenticated session's actor
-			"internal/service/auth/access.go",            // forward-auth verifies the session before attaching the IDE actor
+			"internal/transport/http/handlers/applications_web_handler.go", // isolated app origins verify session and registration before browser RBAC
+			"internal/service/prompt/account_access.go",                    // authenticated request actor or persisted schedule owner
+			"internal/transport/http/middleware/auth.go",                   // attaches the authenticated session's actor
+			"internal/service/auth/access.go",                              // forward-auth verifies the session before attaching the IDE actor
 			"internal/rbac/actor.go",
 		},
 	}

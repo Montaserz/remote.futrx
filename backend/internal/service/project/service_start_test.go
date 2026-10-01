@@ -69,7 +69,7 @@ func TestStartRestoresApplicationsAfterMissingContainerRecovery(t *testing.T) {
 		ID: ID("abcd"), Name: "project", ContainerName: "project", Status: StatusMissing,
 	}}
 	lifecycle := &startTestLifecycle{state: ContainerStateMissing}
-	service := New(repo, ContainerDependencies{Lifecycle: lifecycle}, nil, nil)
+	service := New(repo, ContainerDependencies{Lifecycle: lifecycle}, nil, nil, WithAuthorizer(allowAllAuthorizer{}))
 	calls := 0
 	service.SetContainerRestorer(func(_ context.Context, projectID string) error {
 		calls++
