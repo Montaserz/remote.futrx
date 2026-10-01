@@ -56,7 +56,7 @@ func TestPreparerAppliesSharedWorkflowInOrder(t *testing.T) {
 		t.Fatalf("events = %v", events)
 	}
 	if prepared.ID != "project-id" || prepared.ContainerName != "project-container" ||
-		len(prepared.Secrets) != 1 || prepared.Secrets[0].Key != "PROJECT_SECRET" {
+		len(prepared.Secrets) != 3 || prepared.Secrets[2].Key != "PROJECT_SECRET" || prepared.Secrets[0].Value != "/workspace/.remote-cache/npm" || prepared.Secrets[1].Value != "/workspace/.remote-cache/go-mod" {
 		t.Fatalf("prepared project = %#v", prepared)
 	}
 	if recorder.runtimeAssetContainer != "project-container" || len(recorder.runtimeAssets) != 1 ||
