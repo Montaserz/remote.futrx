@@ -65,7 +65,10 @@ verify files and credentials, run both providers and installed applications, and
 recreate a disposable migrated project. Change the default profile/installer
 pool configuration for future projects as described in the storage guide. Keep
 the source pool and backups until verification completes. A stopped instance
-can be moved back to its original pool; if recovery needs the export, follow
+can be moved back to its original pool. When returning to an unsupported driver
+such as `dir`, remove the newly applied instance root `size` override first
+(`lxc config device unset <instance> root size`) and restore the original disk
+configuration recorded in the backup. If recovery needs the export, follow
 LXD's import workflow without overwriting an instance that still holds data.
 
 The commands follow the [official LXD instance storage migration guide](https://canonical.com/lxd/docs/latest/howto/storage_create_instance/).

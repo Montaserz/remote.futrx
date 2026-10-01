@@ -87,7 +87,32 @@ These limits cap each project's consumption; they do not reserve capacity or
 prevent the sum of many projects/backups/images from filling a pool. Retain the
 existing host capacity checks and warnings.
 
-Automated tests simulate ZFS command results and mount verification. Real quota
-exhaustion, provider concurrency and offline migration/rollback require a
-separately authorized disposable QA host. No current project host is mutated by
-the test suite.
+Unit tests simulate ZFS command results and mount verification. Real quota
+exhaustion and LXD migration/rollback also passed on an isolated Ubuntu guest;
+see the [validation record](15-requirements-validation.md). Concurrent real
+provider authentication and full Remote image recreation still need acceptance
+on a configured QA deployment. The ordinary suite never mutates its host.
+
+For an explicit real-filesystem check, create a disposable parent dataset ending
+in `/remote-qa`, mounted at a separate disposable directory, then run the opt-in
+`TestZFSQuotaOnDisposableHost` test with `REMOTE_ZFS_QA_DATASET` and
+`REMOTE_ZFS_QA_ROOT`. It uses a 32MiB project quota, verifies an actual write is
+rejected at exhaustion, checks provider-home data survives manager recreation,
+and rejects a different project identity. It never creates/destroys a pool and
+retains its small test datasets for inspection. Do not point it at production.
+
+## Disposable LXD root-volume fixture
+
+The opt-in `TestRootQuotaOnDisposableLXD` uses an instance named exactly
+`remote-migrate-qa` on a ZFS LXD pool. Build the tiny static init/probe from the
+backend module with `CGO_ENABLED=0 go build -o qa-init ./internal/integration/containers/resources/testdata/init`.
+Package it as both `rootfs/sbin/init` and `rootfs/bin/qa` in a minimal LXD image,
+with ordinary empty `etc`, `proc`, `sys`, `dev`, `run`, `tmp`, `root` and `workspace`
+directories and an `x86_64` metadata.yaml. This image is only a filesystem test
+fixture, not a usable Remote base image. The probe supports bounded writes and
+reads without needing an Ubuntu installation or provider credentials.
+
+Set `REMOTE_LXD_QA_INSTANCE=remote-migrate-qa` when running that test. It invokes
+Remote's actual resource manager, verifies the resolved pool and 64MiB limit,
+expects a real 128MiB attempted write to fail with a storage/quota error, and
+removes the disposable probe file. It does not delete the instance or its pool.

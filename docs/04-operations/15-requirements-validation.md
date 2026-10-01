@@ -61,9 +61,31 @@ covered by service/transport tests; these do not replace live provider testing.
 - Application permissions are not isolation from a project root shell or an
   agent already authorized to execute arbitrary commands in that same project.
 
+## Executed isolated-VM acceptance — 2026-10-01
+
+On a project-local Ubuntu 24.04 VM (kernel 6.8.0-142, ZFS 2.2.2, LXD
+5.21.8), with file-backed disposable pools and no production credentials:
+
+- Persistent ZFS quota: a real write was rejected at 32MiB; provider-home marker
+  data and the existing quota survived manager recreation; a different project
+  identity could not adopt the dataset.
+- Root quota: Remote’s resource manager resolved the migrated ZFS pool, applied
+  a 64MiB limit, and a real write exceeding it was rejected.
+- Migration: the helper’s read-only preflight, backups and dir-to-ZFS move passed;
+  root/workspace/provider-home markers and mount definitions survived. A stopped
+  rollback to dir preserved the same data after removing the unsupported quota.
+- Real Chromium isolation: launch redirects and application WebSockets worked;
+  platform reads, writes, logout, WebSockets and navigation remained blocked
+  from the application origin. Cookies were not forwarded upstream.
+
+The storage tests are opt-in Go tests documented in the
+[persistent quota guide](16-persistent-project-quotas.md). The small container
+image tests filesystem behavior; it does not substitute for the full Remote
+base image or real Claude/Codex authentication.
+
 ## Live release acceptance still required
 
-No deployment or production storage mutation has been performed. Before release,
+No production deployment or storage mutation has been performed. Before release,
 on disposable QA hosts:
 
 1. Test both a fresh COW install and an upgrade preserving an existing dir pool.
@@ -79,5 +101,5 @@ on disposable QA hosts:
    agent execution and applications, then demonstrate rollback. Retain backups
    and source pools until these checks finish.
 
-These PRs are reviewable implementations, not a claim that live release QA has
-already happened.
+The isolated storage/browser checks above are complete. Full installer/update,
+customized Remote image and concurrent real-provider acceptance remain.
