@@ -120,9 +120,9 @@ func TestSetLimitsAppliesContainerOverrides(t *testing.T) {
 	}
 
 	want := []string{
+		"query /1.0/instances/c1", "storage show default",
 		"config set c1 limits.cpu 4",
 		"config set c1 limits.memory 8GiB",
-		"query /1.0/instances/c1", "storage show default",
 		"config device override c1 root size=40GiB",
 	}
 	if !slices.Equal(runner.calls, want) {
@@ -138,12 +138,22 @@ func TestSetLimitsClearsContainerOverrides(t *testing.T) {
 	}
 
 	want := []string{
+		"query /1.0/instances/c1", "storage show default",
 		"config unset c1 limits.cpu",
 		"config unset c1 limits.memory",
-		"query /1.0/instances/c1", "storage show default",
 		"config device override c1 root size=20GiB",
 	}
 	if !slices.Equal(runner.calls, want) {
 		t.Fatalf("calls:\n got: %q\nwant: %q", runner.calls, want)
+	}
+}
+
+func TestInvalidQuotaDoesNotMutateOtherLimits(t *testing.T) {
+	runner := &fakeRunner{responses: map[string]fakeResponse{}}
+	if err := NewManager(runner).SetLimits(context.Background(), "c1", "4", "8GiB", "invalid"); err == nil {
+		t.Fatal("accepted invalid quota")
+	}
+	if len(runner.calls) != 0 {
+		t.Fatalf("mutated before validation: %v", runner.calls)
 	}
 }

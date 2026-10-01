@@ -79,6 +79,16 @@ func (m *Manager) Ensure(ctx context.Context, containerName string) error {
 // managed profile. Empty values remove the corresponding override. CPU and
 // memory are instance config keys; root-disk quota is a disk-device property.
 func (m *Manager) SetLimits(ctx context.Context, containerName, cpu, memory, disk string) error {
+	if disk == "" {
+		disk = m.defaultDisk
+	}
+	if !diskSize.MatchString(disk) {
+		return fmt.Errorf("invalid root disk quota")
+	}
+	cap, _, err := m.DiskCapability(ctx, containerName)
+	if err != nil {
+		return err
+	}
 	for _, limit := range []struct {
 		key   string
 		value string
@@ -96,16 +106,6 @@ func (m *Manager) SetLimits(ctx context.Context, containerName, cpu, memory, dis
 		}
 	}
 
-	if disk == "" {
-		disk = m.defaultDisk
-	}
-	if !diskSize.MatchString(disk) {
-		return fmt.Errorf("invalid root disk quota")
-	}
-	cap, _, err := m.DiskCapability(ctx, containerName)
-	if err != nil {
-		return err
-	}
 	if !cap.Supported {
 		return nil
 	}
