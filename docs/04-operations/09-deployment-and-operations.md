@@ -373,3 +373,9 @@ sudo bash /opt/remote.futrx/infra/upgrade-workspaces.sh --dry-run
 
 See [storage selection and migration](11-storage.md) for fresh-install ZFS/Btrfs
 configuration, preservation of existing pools and a staged migration checklist.
+
+## Project agent instructions
+
+Operators can add global and provider-specific instructions without rebuilding
+Remote. See [configurable agent instructions](10-agent-instructions.md) for the
+`AGENT_INSTRUCTIONS_FILE` format, activation and project-file behavior.
