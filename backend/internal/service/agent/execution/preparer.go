@@ -84,9 +84,9 @@ func (p *Preparer) Prepare(
 		}
 	}
 
-	prepared := agent.PreparedProject{ID: project.ID, ContainerName: project.ContainerName}
+	prepared := agent.PreparedProject{ID: project.ID, ContainerName: project.ContainerName, Secrets: []agent.ProjectSecret{{Key: "npm_config_cache", Value: "/workspace/.remote-cache/npm"}, {Key: "GOMODCACHE", Value: "/workspace/.remote-cache/go-mod"}}}
 	if secrets, err := p.projects.ListSecrets(ctx, project.ID); err == nil {
-		prepared.Secrets = secrets
+		prepared.Secrets = append(prepared.Secrets, secrets...)
 	}
 	return prepared, nil
 }
