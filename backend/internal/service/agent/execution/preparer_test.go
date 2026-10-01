@@ -143,7 +143,10 @@ type preparationRecorder struct {
 	credentials           provisioning.CredentialSpec
 }
 
-type preparationProjects struct{ recorder *preparationRecorder }
+type preparationProjects struct {
+	recorder *preparationRecorder
+	secrets  []agent.ProjectSecret
+}
 
 func (p preparationProjects) Get(context.Context, agent.ProjectID) (agent.Project, error) {
 	p.recorder.calls = append(p.recorder.calls, "get")
@@ -157,6 +160,9 @@ func (p preparationProjects) Start(context.Context, agent.ProjectID) (agent.Proj
 
 func (p preparationProjects) ListSecrets(context.Context, agent.ProjectID) ([]agent.ProjectSecret, error) {
 	p.recorder.calls = append(p.recorder.calls, "secrets")
+	if p.secrets != nil {
+		return p.secrets, nil
+	}
 	return []agent.ProjectSecret{{Key: "PROJECT_SECRET", Value: "value"}}, nil
 }
 
@@ -264,5 +270,26 @@ func preparationTestProfile() provisioning.Profile {
 			Path:     "/root/.future/runtime.json",
 			HashPath: "/root/.future/.runtime.sha256",
 		}},
+	}
+}
+
+func TestExplicitCachePathsOverrideDefaultsWithoutDuplicateEnvironment(t *testing.T) {
+	recorder := &preparationRecorder{}
+	preparer := New(preparationProjects{recorder: recorder, secrets: []agent.ProjectSecret{{Key: "npm_config_cache", Value: "/workspace/custom-cache"}}}, preparationDependencies(recorder), Options{Provider: "future-agent", Profile: preparationTestProfile()})
+	prepared, err := preparer.Prepare(context.Background(), agent.ProjectPreparationRequest{ProjectID: "project-id"}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	count := 0
+	for _, entry := range prepared.Secrets {
+		if entry.Key == "npm_config_cache" {
+			count++
+			if entry.Value != "/workspace/custom-cache" {
+				t.Fatal("explicit cache overridden")
+			}
+		}
+	}
+	if count != 1 {
+		t.Fatalf("cache keys: %d", count)
 	}
 }
