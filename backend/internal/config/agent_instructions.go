@@ -17,6 +17,10 @@ const maxAgentInstructionsBytes = 1024 * 1024
 // Project-owned instructions remain in the workspace and are read by the CLI;
 // this configuration only changes Remote's managed provider-home files.
 func AgentInstructionProfiles(filename, hostname string, profiles []provisioning.Profile) ([]provisioning.Profile, []byte, error) {
+	return composeAgentInstructions(filename, hostname, profiles)
+}
+
+func composeAgentInstructions(filename, hostname string, profiles []provisioning.Profile) ([]provisioning.Profile, []byte, error) {
 	var additions struct {
 		Global    string            `json:"global"`
 		Providers map[string]string `json:"providers"`

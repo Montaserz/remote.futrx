@@ -72,6 +72,16 @@ func main() {
 	if err != nil {
 		log.Fatalf("configure agent modules: %v", err)
 	}
+	instructionsPath := cfg.Agent.InstructionsFile
+	if instructionsPath == "" {
+		instructionsPath = filepath.Join(cfg.DataDir, "agent-instructions.json")
+		if _, statErr := os.Stat(instructionsPath); statErr == nil {
+			cfg.Agent.InstructionsFile = instructionsPath
+		} else if !os.IsNotExist(statErr) {
+			log.Fatalf("inspect agent instructions: %v", statErr)
+		}
+	}
+	instructionsStore := config.NewAgentInstructionsStore(instructionsPath, agentModules.Profiles())
 	instructionProfiles, agentInstructions, err := config.AgentInstructionProfiles(
 		cfg.Agent.InstructionsFile, publicHostname, agentModules.Profiles(),
 	)
@@ -255,11 +265,12 @@ func main() {
 	}
 
 	handler, err := transport.NewHTTPHandler(transport.Dependencies{
-		Services:       serviceSet,
-		TmuxClient:     tmuxClient,
-		Static:         static,
-		DataDir:        cfg.DataDir,
-		PublicHostname: publicHostname,
+		AgentInstructions: instructionsStore,
+		Services:          serviceSet,
+		TmuxClient:        tmuxClient,
+		Static:            static,
+		DataDir:           cfg.DataDir,
+		PublicHostname:    publicHostname,
 		ServerInfo: serviceserverinfo.New(
 			hostinfo.New(),
 			version.Version,

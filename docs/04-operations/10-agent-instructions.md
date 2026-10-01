@@ -53,3 +53,11 @@ replace `/workspace/AGENTS.md`, `/workspace/CLAUDE.md`, or nested project files;
 the provider CLI loads those supplements using its existing instruction rules.
 The operator JSON controls only project-container managed targets, not host-chat
 instruction files. This is agent guidance, not an authorization boundary.
+
+## Administrator editor
+
+Administrators can edit global and provider-specific additions under **Settings → Agents → Global agent instructions**. The editor lists the instruction file target supplied by each provider (for example `AGENTS.md` and `CLAUDE.md`). Project-owned instruction files continue to supplement the managed provider-home instructions.
+
+Without `AGENT_INSTRUCTIONS_FILE`, settings are stored in `DATA_DIR/agent-instructions.json`, outside the source checkout. An explicit `AGENT_INSTRUCTIONS_FILE` remains authoritative and must exist at startup; the editor updates that file. The backend account needs write access to its parent directory for atomic replacement. Files are written with mode `0600`; back up this file with the server state.
+
+Saving does **not** restart the server or interrupt running agents. Restart the backend after saving. Subsequent project provisioning publishes the newly composed instructions. The UI explicitly reports this requirement. GET/PUT `/api/admin/agent-instructions` requires an authenticated administrator; writes use the same bounded JSON and provider validation as startup configuration. Invalid replacements leave the previous file intact.
